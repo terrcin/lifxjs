@@ -44,8 +44,13 @@ Lifx.prototype._initNetwork = function() {
 			return;
 		}
 		if (debug) console.log(" U- " + msg.toString("hex"));
-		var pkt = packet.fromBytes(msg);
-		self.emit('rawpacket', pkt, rinfo);
+
+		// terrcin: this is really gross but does the trick
+		// when quiting the Android Lifx app it seems to send the below data which causes this to error
+		if (msg.toString("hex") != "00000000") {
+  		var pkt = packet.fromBytes(msg);
+	  	self.emit('rawpacket', pkt, rinfo);
+	  }
 	});
 	this.udpClient.bind(port, "0.0.0.0", function() {
 		self.udpClient.setBroadcast(true);
@@ -82,12 +87,12 @@ Lifx.prototype._setupPacketListener = function() {
 			case 'panGateway':
 				// Got a notification of a gateway.  Check if it's new, using valid UDP, and if it is then handle accordingly
 				if (pkt.payload.service == 1 && pkt.payload.port > 0) {
-					var gw = {ip:rinfo.address, port:pkt.payload.port, site:pkt.preamble.site, 
+					var gw = {ip:rinfo.address, port:pkt.payload.port, site:pkt.preamble.site,
 							service: pkt.payload.service,
 							protocol: pkt.preamble.protocol,
 							bulbAddress: pkt.preamble.bulbAddress.toString("hex")
 						};
-					
+
 					if (!self.gateways[gw.ip]) {
 						//console.log(JSON.stringify(gw));
 						self.gateways[gw.ip] = gw;
@@ -164,9 +169,9 @@ Lifx.prototype.close = function() {
 
 Lifx.prototype._sendToOneOrAll = function(command, bulb) {
 	var self = this;
-	
+
 //	var gw = this.gateways["192.168.0.103"];
-	
+
 	var bulbAddress = null;
 
 	if (typeof bulb != 'undefined') {
